@@ -6,7 +6,9 @@ export const DispatchContext = createContext();
 
 export const initialState = {
   images: {},
-  productList: [],
+  offerList: [],
+  activeOrders: [],
+  orderHistory: [],
 };
 
 export function reducer(state, action) {
@@ -16,10 +18,20 @@ export function reducer(state, action) {
         ...state,
         images: action.images,
       };
-    case 'setProductList':
+    case 'setOfferList':
       return {
         ...state,
-        productList: action.productList,
+        offerList: action.offerList,
+      };
+    case 'setActiveOrders':
+      return {
+        ...state,
+        activeOrders: action.activeOrders,
+      };
+    case 'setOrderHistory':
+      return {
+        ...state,
+        orderHistory: action.orderHistory,
       };
     default:
       return state;

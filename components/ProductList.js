@@ -16,29 +16,32 @@ function ProductList({navigation}) {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={state.productList}
+        data={state.offerList}
         renderItem={({item}) => (
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('ProductInfo', {
-                offer: item.offer,
+                offer: item.name,
                 description: item.description,
-                price: item.price,
-                image: item.image,
+                price: item.offerPrice,
+                image: item.image || 'placeholder',
+                offerId: item.offerId,
               })
             }>
             <View style={styles.item}>
-              {console.log(state.images)}
-              <Image source={state.images[item.image]} style={styles.image} />
+              <Image
+                source={state.images[item.image] || state.images.placeholder}
+                style={styles.image}
+              />
               <View style={styles.textContainer}>
-                <Text style={styles.title}>{item.offer}</Text>
+                <Text style={styles.title}>{item.name}</Text>
                 <Text style={styles.text}>{item.description}</Text>
-                <Text style={styles.price}>{item.price + ':-'}</Text>
+                <Text style={styles.price}>{item.offerPrice + ':-'}</Text>
               </View>
             </View>
           </TouchableOpacity>
         )}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={item => item.offerId.toString()}
       />
     </SafeAreaView>
   );

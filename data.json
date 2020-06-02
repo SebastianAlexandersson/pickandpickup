@@ -1,23 +1,23 @@
 [
   {
-    "id": 1,
-    "offer": "Kaffe och bulle",
+    "offerId": 1,
+    "name": "Kaffe och bulle",
     "description": "En kopp kaffe och en kanelbulle!",
-    "price": 40,
+    "offerPrice": 40,
     "image": "imageOne"
   },
   {
-    "id": 2,
-    "offer": "Pizza och läsk",
+    "offerId": 2,
+    "name": "Pizza och läsk",
     "description": "En pizza och en läsk!",
-    "price": 100,
+    "offerPrice": 100,
     "image": "imageTwo"
   },
   {
-    "id": 3,
-    "offer": "Bröd och vatten",
+    "offerId": 3,
+    "name": "Bröd och vatten",
     "description": "En limpa bröd och ett glas vatten.",
-    "price": 10,
+    "offerPrice": 10,
     "image": "imageThree"
   }
 ]

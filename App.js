@@ -10,6 +10,7 @@ import 'react-native-gesture-handler';
 import React, {useEffect, useReducer} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {
   StateContext,
   DispatchContext,
@@ -18,27 +19,53 @@ import {
 } from './state/store';
 import Home from './pages/Home';
 import ProductInfo from './pages/ProductInfo';
+import Orders from './pages/Orders';
 import data from './data.json';
 import images from './assets/images/images';
 
-const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
+const HomeStack = createStackNavigator();
+const OrdersStack = createStackNavigator();
+
+function HomeStackScreen() {
+  return (
+    <HomeStack.Navigator initialRouteName="Home" headerMode="screen">
+      <HomeStack.Screen name="Home" component={Home} />
+      <HomeStack.Screen name="ProductInfo" component={ProductInfo} />
+    </HomeStack.Navigator>
+  );
+}
+
+function OrdersStackScreen() {
+  return (
+    <OrdersStack.Navigator initialRouteName="Orders">
+      <OrdersStack.Screen name="Orders" component={Orders} />
+    </OrdersStack.Navigator>
+  );
+}
 
 const App: () => React$Node = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
-    dispatch({type: 'setProductList', productList: data});
+    fetch('http://localhost:3000/offers')
+      .then(res => res.json())
+      .then(res =>
+        dispatch({type: 'setOfferList', offerList: [...data, ...res]}),
+      )
+      .catch(err => console.log(err));
+
     dispatch({type: 'setImages', images});
-  }, []);
+  }, [state.offerList]);
   return (
     <>
       <DispatchContext.Provider value={dispatch}>
         <StateContext.Provider value={state}>
           <NavigationContainer>
-            <Stack.Navigator initialRouteName="Home" headerMode="screen">
-              <Stack.Screen name="Home" component={Home} />
-              <Stack.Screen name="ProductInfo" component={ProductInfo} />
-            </Stack.Navigator>
+            <Tab.Navigator>
+              <Tab.Screen name="Home" component={HomeStackScreen} />
+              <Tab.Screen name="Orders" component={OrdersStackScreen} />
+            </Tab.Navigator>
           </NavigationContainer>
         </StateContext.Provider>
       </DispatchContext.Provider>
