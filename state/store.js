@@ -7,8 +7,9 @@ export const DispatchContext = createContext();
 export const initialState = {
   images: {},
   offerList: [],
-  activeOrders: [],
-  orderHistory: [],
+  orders: [],
+  isLoggedIn: false,
+  userId: null,
 };
 
 export function reducer(state, action) {
@@ -23,15 +24,20 @@ export function reducer(state, action) {
         ...state,
         offerList: action.offerList,
       };
-    case 'setActiveOrders':
+    case 'setOrders':
       return {
         ...state,
-        activeOrders: action.activeOrders,
+        orders: action.orders,
       };
-    case 'setOrderHistory':
+    case 'login':
       return {
         ...state,
-        orderHistory: action.orderHistory,
+        isLoggedIn: action.isLoggedIn,
+      };
+    case 'setUserId':
+      return {
+        ...state,
+        userId: action.userId,
       };
     default:
       return state;

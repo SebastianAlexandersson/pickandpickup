@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Image,
   Platform,
-  TextInput,
   ScrollView,
   Alert
 } from 'react-native';
@@ -15,13 +14,16 @@ import MyButton from '../components/Button';
 import moment from 'moment';
 import 'moment/locale/sv';
 import AsyncStorage from '@react-native-community/async-storage';
-import {DispatchContext} from '../state/store';
+import {DispatchContext, StateContext} from '../state/store';
+import io from 'socket.io-client';
+import { localPushNotification } from '../pushNotifications';
 
 moment.locale('sv');
 
 function ProductInfo({route, navigation}) {
   const {offer, description, price, image, offerId} = route.params;
 
+  const state = useContext(StateContext);
   const dispatch = useContext(DispatchContext);
 
   const str = ' + en lite längre produktbeskrivning etc...';
@@ -29,7 +31,6 @@ function ProductInfo({route, navigation}) {
   const [date, setDate] = useState(new Date(Date.now()));
   const [mode, setMode] = useState('date');
   const [show, setShow] = useState(false);
-  const [name, setName] = useState('Ditt namn');
 
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -54,18 +55,20 @@ function ProductInfo({route, navigation}) {
   const [quantity, setQuantity] = useState(1);
 
   const submitOrder = async () => {
+    const useridstr = await AsyncStorage.getItem('@userid');
+    const userid = JSON.parse(useridstr)
+
     const order = {
-      orderdBy: name,
+      userId: userid,
       offerId,
       amount: quantity,
-      status: 'awaiting response',
       qrCode: '123',
       offer,
-      pickupTime: date,
+      orderTime: date,
     };
 
     try {
-      const res = await fetch('http://localhost:3000/orders', {
+      const res = await fetch(`http://localhost:3000/orders?userId=${state.userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,29 +76,62 @@ function ProductInfo({route, navigation}) {
         body: JSON.stringify(order),
       });
 
-      if (res.status === 200) {
-        Alert.alert('Tack!', 'Tack för din beställning. Du kan följa orderstatus på sidan Orders. Du blir även notifierad när orderstatus ändras')
+      if (res.status === 201) {
+        Alert.alert(
+          'Tack!',
+          'Tack för din beställning. Du kan följa orderstatus på sidan Orders. Du blir även notifierad när orderstatus ändras',
+          [
+            { text: 'Ok', onPress: () => navigation.navigate('Beställningar')}
+          ]
+        );
 
-        const data = await AsyncStorage.getItem('@activeOrders');
+        const orderdata = await res.json();
 
-        if (data) {
-          const previousData = await JSON.parse(data);
-          const combinedData = [...previousData, order];
-          const stringifiedCombinedData = JSON.stringify(combinedData);
-          await AsyncStorage.setItem('@activeOrders', stringifiedCombinedData);
-          const allData = await AsyncStorage.getItem('@activeOrders');
-          dispatch({
-            type: 'setActiveOrders',
-            activeOrders: JSON.parse(allData),
-          });
-        } else {
-          await AsyncStorage.setItem('@activeOrders', JSON.stringify([order]));
-          const allData = await AsyncStorage.getItem('@activeOrders');
-          dispatch({
-            type: 'setActiveOrders',
-            activeOrders: JSON.parse(allData),
-          });
-        }
+
+        const socket = io('http://localhost:3000')
+
+        socket.on('connect', () => {
+          console.log(socket.id)
+        })
+
+        socket.on('msg', data => {
+          console.log('STATUS UPDATE, NEW STATUS: ', data)
+
+          if (data.status === 'awaiting response') {
+            return
+          }
+
+          if (data.status !== 'collected') {
+            if (data.status === 'in progress') {
+              localPushNotification('Din beställning behandlas just nu. Du blir notifierad när den är redo att hämtas.');
+            } else {
+              localPushNotification('Din beställning är redo att hämtas.')
+            }
+
+            fetch(`http://localhost:3000/orders?userId=${state.userId}`)
+              .then(res => res.json())
+              .then(data => dispatch({ type: 'setOrders', orders: data }))
+              .catch(err => console.log(err))
+          } else {
+            localPushNotification('Tack och välkommen åter!')
+
+            fetch(`http://localhost:3000/orders?userId=${state.userId}`)
+              .then(res => res.json())
+              .then(data => dispatch({ type: 'setOrders', orders: data }))
+              .catch(err => console.log(err))
+
+            socket.disconnect();
+          }
+        })
+
+        socket.emit('userOrder', {
+          orderId: orderdata.orderId
+        })
+
+        const getOrders = await fetch(`http://localhost:3000/orders?userId=${state.userId}`);
+        const data = await getOrders.json();
+        dispatch({ type: 'setOrders', orders: data })
+        
       }
     } catch (err) {
       console.log(err);
@@ -150,11 +186,6 @@ function ProductInfo({route, navigation}) {
             onPress={() => (quantity === 1 ? null : setQuantity(quantity - 1))}
           />
         </View>
-        <TextInput
-          style={styles.nameInput}
-          onChangeText={text => setName(text)}
-          value={name}
-        />
         <MyButton label="Beställ Nu" onPress={submitOrder} />
       </View>
     </ScrollView>
@@ -197,16 +228,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '50%',
     marginBottom: 10,
-  },
-  nameInput: {
-    borderWidth: 1,
-    borderColor: 'black',
-    borderStyle: 'solid',
-    marginVertical: 10,
-    fontWeight: 'bold',
-    elevation: 3,
-    backgroundColor: '#f7f7f7',
-    textAlign: 'center',
   },
 });
 

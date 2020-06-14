@@ -20,7 +20,7 @@ function ProductList({navigation}) {
         renderItem={({item}) => (
           <TouchableOpacity
             onPress={() =>
-              navigation.navigate('ProductInfo', {
+              navigation.navigate('Erbjudande', {
                 offer: item.name,
                 description: item.description,
                 price: item.offerPrice,
