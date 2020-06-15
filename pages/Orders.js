@@ -10,6 +10,7 @@ import {
 import { StateContext, DispatchContext } from '../state/store';
 import moment from 'moment';
 import 'moment/locale/sv';
+import { useIsFocused } from '@react-navigation/native';
 
 moment.locale('sv');
 
@@ -18,6 +19,8 @@ function Orders({ navigation }) {
   const dispatch = useContext(DispatchContext);
 
   const [isLoading, setIsLoading] = useState(true)
+
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     (async () => {
@@ -31,6 +34,20 @@ function Orders({ navigation }) {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (isFocused) {
+      (async () => {
+        try {
+          fetch(`http://localhost:3000/orders?userId=${state.userId}`)
+            .then(res => res.json())
+            .then(res => dispatch({ type: 'setOrders', orders: res }))
+        } catch (err) {
+          console.log(err);
+        }
+      })();
+    }
+  }, [isFocused]);
 
   const activeOrders = state.orders.filter(order => order.status !== 'collected');
   const orderHistory = state.orders.filter(order => order.status === 'collected');
@@ -95,7 +112,7 @@ function Orders({ navigation }) {
                 </View>
                 <View style={styles.row}>
                   <Text style={styles.rowTitle}>Pris:</Text>
-                  <Text>{item.price}</Text>
+                  <Text>{`${item.offerPrice * item.amount}:-`}</Text>
                 </View>
               </View>
             )

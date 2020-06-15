@@ -26,9 +26,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import LoadingScreen from './pages/LoadingScreen';
-import images from './assets/images/images';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { configurePushNotifications } from './pushNotifications';
+import { localPushNotification } from './pushNotifications';
+import io from 'socket.io-client';
 
 configurePushNotifications();
 
@@ -70,25 +71,75 @@ const App: () => React$Node = () => {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    fetch('http://localhost:3000/offers')
-      .then(res => res.json())
-      .then(res =>
-        dispatch({type: 'setOfferList', offerList: res}),
-      )
-      .catch(err => console.log(err));
-
     (async () => {
-      const userid = await AsyncStorage.getItem('@userid')
+      console.log('Running app init')
+      await AsyncStorage.getItem('@userid')
+        .then(async userid => {
+          console.log('USERID: ', userid)
+          if (userid !== null) {
+            dispatch({ type: 'setUserId', userId: JSON.parse(userid) })
+            dispatch({ type: 'login', isLoggedIn: true })
+          }
 
-      if (userid !== null) {
-        dispatch({ type: 'setUserId', userId: JSON.parse(userid) })
-        dispatch({ type: 'login', isLoggedIn: true })
-      }
+          if (!state.socket) {
+            const orderReq = await fetch(`http://localhost:3000/orders?userId=${userid}`)
+            const orders = await orderReq.json();
 
-      setIsLoading(false);
+            if (orders.length > 0) {
+              const activeOrders = orders.filter(order => order.status !== 'collected')
+
+              if (activeOrders.length > 0) {
+                const socket = io('http://localhost:3000')
+
+                socket.on('connect', () => {
+                  console.log('Websocket connected: ', socket.id)
+                })
+
+                socket.on('msg', data => {
+                  console.log('STATUS UPDATE, NEW STATUS: ', data)
+
+                  if (data.status === 'awaiting response') {
+                    return
+                  }
+
+                  if (data.status !== 'collected') {
+                    if (data.status === 'in progress') {
+                      localPushNotification('Din beställning behandlas just nu. Du blir notifierad när den är redo att hämtas.');
+                    } else {
+                      localPushNotification('Din beställning är redo att hämtas.')
+                    }
+
+                  } else {
+                    localPushNotification('Tack och välkommen åter!')
+                  }
+                  fetch(`http://localhost:3000/orders?userId=${userid}`)
+                    .then(res => res.json())
+                    .then(data => {
+                      console.log('DATA!!!!: ', data)
+                      console.log('USERID!!', userid)
+                      return data
+                    })
+                    .then(data => dispatch({ type: 'setOrders', orders: data }))
+                    .catch(err => console.log(err))
+                })
+
+                dispatch({ type: 'setSocket', socket })
+
+                activeOrders.forEach(order => {
+                  console.log('Creating new websocket for orderid: ', order.orderId);
+                  socket.emit('userOrder', { orderId: order.orderId });
+                })
+              }
+            }
+          }
+        })
+        .then(() => setIsLoading(false))
+        .then(() => {
+          console.log('App init done');
+          console.log('STATE: ', state)
+        })
     })()
 
-    dispatch({type: 'setImages', images});
   }, []);
   return (
     <>

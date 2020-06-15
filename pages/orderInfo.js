@@ -12,13 +12,14 @@ function OrderInfo({ route, navigation }) {
   const state = useContext(StateContext);
   const dispatch = useContext(DispatchContext);
 
-  const { name, price, amount, orderTime, orderId } = route.params.order;
+  const { name, offerPrice, amount, orderTime, orderId } = route.params.order;
 
   const cancelOrder = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/orders?userId=${state.userId}&orderId=${orderId}`)
+      const res = await fetch(`http://localhost:3000/orders?userId=${state.userId}&orderId=${orderId}`, { method: 'DELETE' })
       const data = await res.json();
-      dispatch({ type: 'setOrders', order: data.orders })
+      dispatch({ type: 'setOrders', orders: data })
+      navigation.navigate('Beställningar')
     } catch (err) {
       console.log(err)
     }
@@ -36,7 +37,7 @@ function OrderInfo({ route, navigation }) {
         <View style={styles.column}>
           <Text style={styles.content}>{name}</Text>
           <Text style={styles.content}>{amount}</Text>
-          <Text style={styles.content}>{price}</Text>
+          <Text style={styles.content}>{`${offerPrice * amount}:-`}</Text>
           {new Date(orderTime) <= new Date(Date.now()) ?
             (<Text>Nu</Text>)
             :

@@ -1,5 +1,6 @@
-import React, {useContext} from 'react';
-import {StateContext} from '../state/store';
+import React, { useContext, useEffect, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
+import { StateContext, DispatchContext } from '../state/store';
 import {
   FlatList,
   StyleSheet,
@@ -8,13 +9,53 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  ActivityIndicator
 } from 'react-native';
 
 function ProductList({navigation}) {
   const state = useContext(StateContext);
+  const dispatch = useContext(DispatchContext);
+
+  const isFocused = useIsFocused();
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://localhost:3000/offers')
+      .then(res => res.json())
+      .then(res =>
+        dispatch({type: 'setOfferList', offerList: res}),
+      )
+      .then(() => setIsLoading(false))
+      .catch(err => console.log(err));
+  }, [])
+
+  useEffect(() => {
+    if (isFocused) {
+      fetch('http://localhost:3000/offers')
+        .then(res => res.json())
+        .then(res =>
+          dispatch({type: 'setOfferList', offerList: res}),
+        )
+        .catch(err => console.log(err));
+    }
+  }, [isFocused])
+
+  const Loader = ({ loading }) => {
+    if (loading) {
+      return (
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color="#0000ff" />
+        </View>
+      )
+    } else {
+      return null
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
+      <Loader loading={isLoading} />
       <FlatList
         data={state.offerList}
         renderItem={({item}) => (
@@ -24,13 +65,13 @@ function ProductList({navigation}) {
                 offer: item.name,
                 description: item.description,
                 price: item.offerPrice,
-                image: item.image || 'placeholder',
+                image: item.offerPicture,
                 offerId: item.offerId,
               })
             }>
             <View style={styles.item}>
               <Image
-                source={state.images[item.image] || state.images.placeholder}
+                source={{ uri: `http://localhost:3000/${item.offerPicture}`}}
                 style={styles.image}
               />
               <View style={styles.textContainer}>
@@ -77,6 +118,9 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     padding: 10,
   },
+  loader: {
+    marginTop: 100
+  }
 });
 
 export default ProductList;

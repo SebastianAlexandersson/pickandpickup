@@ -8,15 +8,14 @@ import {
   ScrollView,
   Alert
 } from 'react-native';
-import images from '../assets/images/images';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import MyButton from '../components/Button';
 import moment from 'moment';
 import 'moment/locale/sv';
 import AsyncStorage from '@react-native-community/async-storage';
 import {DispatchContext, StateContext} from '../state/store';
-import io from 'socket.io-client';
 import { localPushNotification } from '../pushNotifications';
+import io from 'socket.io-client';
 
 moment.locale('sv');
 
@@ -25,8 +24,6 @@ function ProductInfo({route, navigation}) {
 
   const state = useContext(StateContext);
   const dispatch = useContext(DispatchContext);
-
-  const str = ' + en lite längre produktbeskrivning etc...';
 
   const [date, setDate] = useState(new Date(Date.now()));
   const [mode, setMode] = useState('date');
@@ -87,46 +84,52 @@ function ProductInfo({route, navigation}) {
 
         const orderdata = await res.json();
 
+        if (!state.socket) {
+          const socket = io('http://localhost:3000')
+          console.log('USING NEW SOCKET')
 
-        const socket = io('http://localhost:3000')
+          socket.on('connect', () => {
+            console.log('Websocket connected: ', socket.id)
+          })
 
-        socket.on('connect', () => {
-          console.log(socket.id)
-        })
+          socket.on('msg', data => {
+            console.log('STATUS UPDATE, NEW STATUS: ', data)
 
-        socket.on('msg', data => {
-          console.log('STATUS UPDATE, NEW STATUS: ', data)
-
-          if (data.status === 'awaiting response') {
-            return
-          }
-
-          if (data.status !== 'collected') {
-            if (data.status === 'in progress') {
-              localPushNotification('Din beställning behandlas just nu. Du blir notifierad när den är redo att hämtas.');
-            } else {
-              localPushNotification('Din beställning är redo att hämtas.')
+            if (data.status === 'awaiting response') {
+              return
             }
 
+            if (data.status !== 'collected') {
+              if (data.status === 'in progress') {
+                localPushNotification('Din beställning behandlas just nu. Du blir notifierad när den är redo att hämtas.');
+              } else {
+                localPushNotification('Din beställning är redo att hämtas.')
+              }
+
+            } else {
+              localPushNotification('Tack och välkommen åter!')
+            }
             fetch(`http://localhost:3000/orders?userId=${state.userId}`)
               .then(res => res.json())
+              .then(data => {
+                console.log('DATA!!!!: ', data)
+                console.log('USERID!!!: ', state.userId)
+                return data
+              })
               .then(data => dispatch({ type: 'setOrders', orders: data }))
               .catch(err => console.log(err))
-          } else {
-            localPushNotification('Tack och välkommen åter!')
+          })
+            
+            dispatch({ type: 'setSocket', socket })
 
-            fetch(`http://localhost:3000/orders?userId=${state.userId}`)
-              .then(res => res.json())
-              .then(data => dispatch({ type: 'setOrders', orders: data }))
-              .catch(err => console.log(err))
+            socket.emit('userOrder', {
+              orderId: orderdata.orderId
+            })
 
-            socket.disconnect();
-          }
-        })
-
-        socket.emit('userOrder', {
-          orderId: orderdata.orderId
-        })
+        } else {
+          console.log('USING SOCKET FROM STATE')
+          state.socket.emit('userOrder', { orderId: orderdata.orderId })
+        }
 
         const getOrders = await fetch(`http://localhost:3000/orders?userId=${state.userId}`);
         const data = await getOrders.json();
@@ -140,10 +143,10 @@ function ProductInfo({route, navigation}) {
 
   return (
     <ScrollView style={styles.container}>
-      <Image source={images[image]} style={styles.image} />
+      <Image source={{ uri: `http://localhost:3000/${image}`}} style={styles.image} />
       <View style={styles.content}>
         <Text style={styles.title}>{offer}</Text>
-        <Text style={styles.description}>{description + str}</Text>
+        <Text style={styles.description}>{description}</Text>
         <Text style={styles.price}>{`Pris: ${price}:-`}</Text>
         <View>
           <View style={styles.datePickerContainer}>

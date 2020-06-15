@@ -10,6 +10,7 @@ export const initialState = {
   orders: [],
   isLoggedIn: false,
   userId: null,
+  socket: null,
 };
 
 export function reducer(state, action) {
@@ -39,6 +40,11 @@ export function reducer(state, action) {
         ...state,
         userId: action.userId,
       };
+    case 'setSocket':
+      return {
+        ...state,
+        socket: action.socket,
+      }
     default:
       return state;
   }
