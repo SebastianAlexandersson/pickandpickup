@@ -10,6 +10,7 @@ function Settings() {
   function logout() {
     AsyncStorage.removeItem('@userid')
       .then(() => dispatch({ type: 'login', isLoggedIn: false }))
+      .then(() => dispatch({ type: 'setUserId', userId: null }))
       .catch(err => console.log(err));
   }
 

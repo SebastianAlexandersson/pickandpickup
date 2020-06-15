@@ -31,8 +31,9 @@ function Login({ navigation }) {
         }
       })
       .then(async res => {
-        await AsyncStorage.setItem('@userid', JSON.stringify(res.userid))
-        dispatch({ type: 'login', isLoggedIn: true })
+        await AsyncStorage.setItem('@userid', JSON.stringify(res.userid));
+        dispatch({ type: 'setUserId', userId: JSON.parse(userid) });
+        dispatch({ type: 'login', isLoggedIn: true });
       })
       .catch(() => setError('Något gick fel...'));
   }

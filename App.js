@@ -81,7 +81,7 @@ const App: () => React$Node = () => {
             dispatch({ type: 'login', isLoggedIn: true })
           }
 
-          if (!state.socket) {
+          if (!state.socket && userid) {
             const orderReq = await fetch(`http://localhost:3000/orders?userId=${userid}`)
             const orders = await orderReq.json();
 
@@ -136,7 +136,6 @@ const App: () => React$Node = () => {
         .then(() => setIsLoading(false))
         .then(() => {
           console.log('App init done');
-          console.log('STATE: ', state)
         })
     })()
 
