@@ -31,11 +31,15 @@ function Login({ navigation }) {
         }
       })
       .then(async res => {
+        console.log(res)
         await AsyncStorage.setItem('@userid', JSON.stringify(res.userid));
-        dispatch({ type: 'setUserId', userId: JSON.parse(userid) });
+        dispatch({ type: 'setUserId', userId: res.userid });
         dispatch({ type: 'login', isLoggedIn: true });
       })
-      .catch(() => setError('Något gick fel...'));
+      .catch(error => {
+        console.log(error)
+        setError('Något gick fel..')
+      }) 
   }
 
   return (
